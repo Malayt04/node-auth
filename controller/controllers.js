@@ -1,6 +1,7 @@
 const User=require('../models/User');
 const jwt=require('jsonwebtoken');
-const cookieParser=require('cookie-parser');
+const bcrypt=require('bcrypt');
+
 
 
 
@@ -22,6 +23,13 @@ const handleError=(err)=>{
         Object.values(err.errors).forEach(({properties})=>{
             errors[properties.path]=properties.message;
         });
+    }
+
+    if(err.message=='incorrect email'){
+        errors.email='incorrect email';
+    }
+    if(err.message=='incorrect password'){
+        errors.password='incorrect password';
     }
 
     if(err.code==11000){
@@ -47,13 +55,15 @@ const getLoginPage=(req,res)=>{
 const postSignUp=async(req,res)=>{
 
     const {email,password}=req.body;
+    const salt = await bcrypt.genSalt(10);
+    const hashedPass = await bcrypt.hash(password, salt);
+    const newUser=new User({email,password:hashedPass});
 
     try {
-     const newUser=await User.create({email,password});
-
+     
+      await newUser.save();
      const token=createToken(newUser._id);
-     res.cookie('jwt',token,{httpOnly:false,maxAge:maxAge*1000});
-
+     res.cookie('jwt',token,{httpOnly:true,maxAge:maxAge*1000});
      console.log(newUser);
      res.status(201).json({newUser:newUser._id});
     } catch (error) {
@@ -63,18 +73,22 @@ const postSignUp=async(req,res)=>{
   
 }   
 
-const postLogin=async (req,res)=>{
-    const {email,password} = req.body;
+const postLogin = async (req, res) => {
+    const { email, password } = req.body;
     try {
-        const user = await User.login(email,password);
-        const token=createToken(user._id);
-        res.cookie('jwt',token,{httpOnly:false,maxAge:maxAge*1000});
-        res.send(user._id);
+      const user=await User.login(email, password);
+      const token=createToken(user._id);
+     res.cookie('jwt',token,{httpOnly:true,maxAge:maxAge*1000});
+      res.status(200).json({user:user._id});
     } catch (error) {
-        console.log(error);
+    const errors=handleError(error);
+      res.status(500).json({errors})
     }
-    
-   
-}
+  };
 
-module.exports={getSignUpPage,postLogin,getLoginPage,postSignUp};
+  const getLogoutPage=(req,res)=>{
+    res.cookie('jwt','',{maxAge:1});
+    res.redirect('/');
+  }
+
+module.exports={getSignUpPage,postLogin,getLoginPage,postSignUp,getLogoutPage};

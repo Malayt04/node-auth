@@ -11,6 +11,7 @@
      <button>Sign Up</button>
 </form>
 
+
 <script>
     const form = document.querySelector('form');
     const emailError=document.querySelector('.email.error');
@@ -29,7 +30,7 @@
         console.log(email,password);
 
         try {
-            const res=await fetch('/login/',{
+            const res=await fetch('/login',{
                 method: 'POST',
                 body:JSON.stringify({email,password}),
                 headers: {'Content-Type': 'application/json'}
@@ -38,9 +39,9 @@
             const data=await res.json();
             console.log(data);
 
-            if(data.err){
-                   emailError.textContent=data.err.email;
-                   passwordError.textContent=data.err.password;
+       if(data.errors){
+                   emailError.textContent=data.errors.email;
+                   passwordError.textContent=data.errors.password;
             }
 
             if(data.user){
@@ -48,7 +49,7 @@
             }
 
         } catch (error) {
-            console.log(error.email,error.password);
+            console.log(error);
         }
         
     })
